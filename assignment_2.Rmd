@@ -1,0 +1,156 @@
+---
+title: "assignment_2"
+author: "Mattis"
+date: "2024-10-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+
+## Load packages
+
+pacman::p_load('tidyverse', 'dslabs', 'cowplot')
+
+
+```
+
+
+
+```{r}
+
+## Load in the divorce margarine dataset 
+
+d <- divorce_margarine
+
+
+
+```
+
+
+```{r}
+
+## Check the correlation between divorce and margarine
+
+cor(d$divorce, d$margarine)
+
+
+## Visualize the relationship between divorce and margarine
+
+
+ggplot(d, aes(x = divorce_rate_maine, y = margarine_consumption_per_capita)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Divorce and Margarine", x = "Divorce rates in Maine",y = "Margarine consumption per capita") + 
+  theme_cowplot()
+
+
+
+```
+
+It is obviously clear that there is an almost perfect correlation between divorce rates in Maine and margarine consumption per capita. Now, this intuitively seems like a spurious correlation, in the sense that we really have no evidence that margerine causes divorce. The causal relationship is most likely not there, which means this is just a random occurence in the world. 
+
+
+```{r}
+
+## Load in the GSSvocab dataset 
+
+load('./data/GSSvocab.RData')
+
+
+```
+
+
+
+```{r}
+
+
+## Filter data for year 1978 
+
+gss_1978 <- GSSvocab %>% filter(year == '1978')
+
+## Removing rows with missing values
+
+gss_1978 <- gss_1978 %>% drop_na()
+
+
+
+```
+
+
+```{r}
+
+## Modelling the relationship between vocabulary and education
+
+m1 <- lm(vocab ~ educ, data = gss_1978)
+
+summary(m1)
+
+## Visualize the relationship between vocabulary and education
+
+ggplot(gss_1978, aes(x = educ, y = vocab)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Vocabulary and Education", x = "Eduaction",y = "Vocabulary score") + 
+  theme_cowplot()
+
+```
+
+Analysing the summary statement above, as well as seeing the general trend of the data visualized, it suggest that there is a strong positive linear relationship between vocabulary and education. A one unit increase in eduction score would lead to an increase of ~ 0.39 in vocabulary score, with a low standard error. Intuitively, without having prior knowledge of the literature regarding this subject, it seems a plausible causal relationship. With more education comes more exposure to new words. However, this is obviously not the only factor in vocabulary development, so the model is not exactly representative. Education (measured in some kind of numeric scale?) is though a statistically significant predictor (p < 0.05) of vocabulary if one is inclined to follow p-values. 
+
+
+```{r}
+
+## Adding whether or not the person is a native-born english speaker as a predictor
+
+m2 <- lm(vocab ~ educ + nativeBorn, data = gss_1978)
+
+summary(m2)
+
+
+```
+
+Again, the summary statement provides some insight into the relatioships between these variables. Adding being a native english speaker as a variable is also statistically significant (p < 0.05), adding a 'bonus' so to speak of 0.65 to the vocabulary score if the person a native-born. Intuitively, the mechanism also seems plausible, having been born and most likely grown up in the country where the language is spoken would lead to a higher score. Looking at the adjusted R-squared (if one is to trust this, but as we are only using two variables, it seems relatively ok and not overfit), the model explains just shy of 30% of the variance in vocab score, which is decent, but far from the whole picture. 
+
+
+```{r}
+
+## Visualizing the education level and nativeborn
+
+ggplot(gss_1978, aes(x = educ, y = nativeBorn, fill = nativeBorn)) +
+  geom_boxplot() +
+  labs(title = "Education and Native Born", x = "Education",y = "Native Born") + 
+  theme_cowplot() + 
+  scale_fill_manual(values = c("seagreen", "purple3")) + 
+  theme(legend.position = "none")
+
+
+## Creating a model with the interaction term for education and nativeborn 
+
+m3 <- lm(vocab ~ educ * nativeBorn, data = gss_1978)
+
+summary(m3)
+
+
+
+```
+As illustrated in the figure above, there really is no difference in education between native-born and non-native born, which is reflected in the model results when adding the interaction term. It is not statically significant (p > 0.05), which makes sense as the boxplots are visually very similar. Adding the term does also not improve the model in terms of explaning variance. 
+
+
+```{r}
+
+## Model comparison 
+
+# Bayesian Information Criterion
+
+BIC(m1, m2, m3)
+
+# Akaike Information Criterion
+
+AIC(m1, m2, m3)
+
+
+```
+
+Using both bayesian and akaike information criterion for the frequentist models, the second model (eudcation and nativeborn) appears to be the best of the three. This is as it has the lowest value in both criterions. However, importantly, these criterions do not select after what makes the most sense for causal inference, that is another topic. This is for prediction and model fit. 
+
