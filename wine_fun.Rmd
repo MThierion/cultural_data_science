@@ -10,7 +10,7 @@ output: html_document
 
 ## Load packages
 
-pacman::p_load('tidyverse', 'dslabs', 'cowplot', 'brms')
+pacman::p_load('tidyverse', 'dslabs', 'cowplot', 'brms', 'dagitty')
 
 
 ```
@@ -64,6 +64,11 @@ print(d_count)
 
 
 ```
+
+## Only grape varieties with more than = 5 wines
+
+
+
 ```{r}
 # set lower bound
 d_filt <- d %>% 
@@ -84,6 +89,9 @@ d_filt <- d_filt %>%
 ```
 
 
+## Only Countries with more than = 8 wines
+
+
 ```{r}
 # see occurances
 d_count <- table(d_filt$Country)
@@ -97,9 +105,12 @@ print(d_count)
 # set lower bound
 d_filt <- d_filt %>% 
   group_by(Country) %>% 
-  filter(n() >= 4)
+  filter(n() >= 8)
 
 ```
+
+
+## Closure only as cork or screwcap
 
 
 ```{r}
@@ -118,25 +129,231 @@ d_filt <- d_filt %>%
 
 
 
+## Visualizing the distribution of prices
+
+
+```{r}
+
+## Viz the distribution of wine prices
+
+d_filt %>%
+  ggplot(aes(Price)) +
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of wine prices",
+       x = "Price",
+       y = "Frequency") +
+  theme_minimal()
+
+
+
+
+
+```
+
+
+## Simulating the DAG 
+
+```{r}
+
+
+dag <- dagitty("dag {
+Country -> Grape
+Country -> Closure
+Country -> Price
+Grape -> Price
+Grape -> Closure
+Closure -> Price
+}")
+
+plot(dag)
+
+
+```
 
 
 
 
 
 
+```{r}
+
+# Simulate country data
+
+## Probabilities for 10 countries
+
+
+n = 1000
+
+categories <- c("France", "Italy", "Spain", "USA", "Australia")
+probabilities <- c(0.3, 0.2, 0.2, 0.1, 0.2)
+
+
+sim_data <- data.frame(
+  country = sample(categories, size = n, replace = TRUE, prob = probabilities)
+)
+
+
+
+
+```
+
+
+```{r}
+
+## Simulate grape data
+
+# Grape categories
+grapes <- c("Chardonnay", "Sauvignon Blanc", "Cabernet Sauvignon", "Merlot", 
+            "Pinot Noir")
+
+
+# Define toy probabilities for grape varieties based on country
+grape_probs <- list(
+  "France" = c(0.2, 0.2, 0.2, 0.2, 0.2),
+  "Italy" = c(0.05, 0.05, 0.2, 0.5, 0.2),
+  "Spain" = c(0.4, 0.2, 0.1, 0.2, 0.1),
+  "USA" = c(0.2, 0.3, 0.2, 0.1, 0.2),
+  "Australia" = c(0.2, 0.2, 0.4, 0, 0.2)
+)
+
+
+# Simulate grape data
+sim_data$grape <- sapply(sim_data$country, function(c) {
+  sample(grapes, size = 1, replace = TRUE, prob = grape_probs[[c]])
+})
+
+
+```
 
 
 
 
 
+```{r}
+
+
+
+# Define conditional probabilities for closure type based on country and grape
+closure_probs <- list(
+  "France" = list(
+    "Chardonnay" = c(screwtop = 0.2, cork = 0.8),
+    "Sauvignon Blanc" = c(screwtop = 0.3, cork = 0.7),
+    "Cabernet Sauvignon" = c(screwtop = 0.2, cork = 0.8),
+    "Merlot" = c(screwtop = 0.3, cork = 0.7),
+    "Pinot Noir" = c(screwtop = 0.1, cork = 0.9)
+    
+  ),
+  "Australia" = list(
+    "Chardonnay" = c(screwtop = 0.8, cork = 0.2),
+    "Sauvignon Blanc" = c(screwtop = 0.9, cork = 0.1),
+    "Cabernet Sauvignon" = c(screwtop = 0.6, cork = 0.4),
+    "Merlot" = c(screwtop = 0.7, cork = 0.3),
+    "Pinot Noir" = c(screwtop = 0.7, cork = 0.3)
+    
+  ),
+  
+  "Italy" = list(
+    "Chardonnay" = c(screwtop = 0.2, cork = 0.8),
+    "Sauvignon Blanc" = c(screwtop = 0.3, cork = 0.7),
+    "Cabernet Sauvignon" = c(screwtop = 0.1, cork = 0.9),
+    "Merlot" = c(screwtop = 0.2, cork = 0.8),
+    "Pinot Noir" = c(screwtop = 0.3, cork = 0.7)
+    
+  ),
+  
+  "Spain" = list(
+    "Chardonnay" = c(screwtop = 0.4, cork = 0.6),
+    "Sauvignon Blanc" = c(screwtop = 0.4, cork = 0.6),
+    "Cabernet Sauvignon" = c(screwtop = 0.5, cork = 0.5),
+    "Merlot" = c(screwtop = 0.5, cork = 0.5),
+    "Pinot Noir" = c(screwtop = 0.4, cork = 0.6)
+  ),
+  
+  "USA" = list(
+    "Chardonnay" = c(screwtop = 0.7, cork = 0.3),
+    "Sauvignon Blanc" = c(screwtop = 0.8, cork = 0.2),
+    "Cabernet Sauvignon" = c(screwtop = 0.4, cork = 0.6),
+    "Merlot" = c(screwtop = 0.4, cork = 0.6),
+    "Pinot Noir" = c(screwtop = 0.5, cork = 0.5)
+))
+
+# Simulate closure type
+sim_data$closure <- mapply(function(c, g) {
+  prob <- closure_probs[[c]][[g]]
+  sample(c("screwtop", "cork"), size = 1, replace = TRUE, prob = prob)
+}, c = sim_data$country, g = sim_data$grape)
+
+
+
+```
+
+
+
+```{r}
+
+# Simulate price data
+
+
+# Define base scale and shape parameters for gamma distribution
+base_params <- list(
+  "France" = c(scale = 20, shape = 2),
+  "Italy" = c(scale = 15, shape = 2.5),
+  "Spain" = c(scale = 14, shape = 3),
+  "USA" = c(scale = 12, shape = 2.2),
+  "Australia" = c(scale = 10, shape = 2.8)
+)
+
+# Adjustments for grape varieties
+grape_adjustments <- list(
+  "Chardonnay" = c(scale = 1, shape = 1),
+  "Sauvignon Blanc" = c(scale = 0.8, shape = 1.0),
+  "Cabernet Sauvignon" = c(scale = 1.2, shape = 1.2),
+  "Merlot" = c(scale = 1.1, shape = 1.1),
+  "Pinot Noir" = c(scale = 1.4, shape = 0.8)
+  # Extend for other grapes...
+)
+
+# Adjustments for closure type
+closure_adjustments <- list(
+  "screwtop" = c(scale = 0.8, shape = 1.1),
+  "cork" = c(scale = 1.2, shape = 0.9)
+)
+
+# Calculate price using gamma distribution
+sim_data$price <- mapply(function(c, g, cl) {
+  base <- base_params[[c]]
+  grape_adj <- grape_adjustments[[g]]
+  closure_adj <- closure_adjustments[[cl]]
+  
+  scale <- base["scale"] * grape_adj["scale"] * closure_adj["scale"]
+  shape <- base["shape"] * grape_adj["shape"] * closure_adj["shape"]
+  
+  rgamma(1, shape = shape, scale = scale)
+}, c = sim_data$country, g = sim_data$grape, cl = sim_data$closure)
 
 
 
 
 
+```
 
 
 
+```{r}
+
+## Plot prices from sim_data
+
+sim_data %>%
+  ggplot(aes(price)) +
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") +
+  labs(title = "Simulated distribution of wine prices",
+       x = "Price",
+       y = "Frequency") +
+  theme_minimal()
+
+
+
+```
 
 
 
