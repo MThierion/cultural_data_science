@@ -1,0 +1,88 @@
+---
+title: "assignment_2"
+author: "Mattis"
+date: "2024-10-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+
+## Load packages
+
+pacman::p_load('tidyverse', 'dslabs', 'cowplot', 'brms')
+
+
+```
+
+
+
+```{r}
+
+## Load in the divorce margarine dataset 
+
+d <- read_csv('./data/WineDataset.csv')
+
+
+
+```
+
+
+```{r}
+
+## Cleaning up data 
+
+# Only bottles of 75 cl
+
+d <- d %>%
+  mutate(Capacity = case_when(
+    str_detect(Capacity, "^750ML$|^75CL$") ~ "75",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(Capacity))
+
+
+# Fix prices
+
+d <- d %>%
+  mutate(Price = as.numeric(str_extract(Price, "\\d+\\.?\\d*")))
+
+# Remove NV wines
+
+d <- d %>%
+  filter(!str_detect(Vintage, "NV"))
+
+```
+
+
+
+
+```{r}
+
+
+# Define priors for the model
+priors <- c(
+  set_prior("normal(0, 10)", class = "Intercept"),          # Prior for intercept
+  set_prior("normal(0, 5)", class = "b", coef = "Vintage"), # Prior for vintage effect
+  set_prior("normal(0, 5)", class = "b", coef = "Grape"), # Prior for grape variety
+  set_prior("normal(0, 5)", class = "b", coef = "Country")   # Prior for region
+)
+
+# Fit the Bayesian model
+model <- brm(
+  Price ~ b_Grape + b_Vintage + b_Country, 
+  data = d, 
+  family = gaussian(),    # Assuming price follows a normal distribution
+  prior = priors,         # Apply specified priors
+  chains = 8,             # Number of MCMC chains
+  iter = 2000,            # Number of iterations per chain
+  seed = 123              # Seed for reproducibility
+)
+
+# Print a summary of the model
+summary(model)
+
+
+
+```
+
