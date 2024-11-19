@@ -27,6 +27,7 @@ d <- read_csv('./data/WineDataset.csv')
 
 ```
 
+*Cleaning*
 
 ```{r}
 
@@ -49,10 +50,96 @@ d <- d %>%
 
 # Remove NV wines
 
-d <- d %>%
-  filter(!str_detect(Vintage, "NV"))
+#d <- d %>%
+#  filter(!str_detect(Vintage, "NV"))
 
 ```
+
+
+```{r}
+# see occurances
+d_count <- table(d$Grape)
+d_count <- sort(d_count, decreasing = T)
+print(d_count)
+
+
+```
+```{r}
+# set lower bound
+d_filt <- d %>% 
+  group_by(Grape) %>% 
+  filter(n() >= 5)
+
+```
+
+
+```{r}
+# transform
+d_filt <- d_filt %>% 
+  mutate(Grape = ifelse(Grape == "Shiraz", "Syrah", Grape),
+         Grape = ifelse(Grape == "Garnacha", "Grenache", Grape),
+         Grape = ifelse(Grape == "Pinot Grigio", "Pinot Gris", Grape), 
+         Grape = ifelse(Grape == "Primitivo", "Zinfandel", Grape))
+         
+```
+
+
+```{r}
+# see occurances
+d_count <- table(d_filt$Country)
+d_count <- sort(d_count, decreasing = T)
+print(d_count)
+
+
+```
+
+```{r}
+# set lower bound
+d_filt <- d_filt %>% 
+  group_by(Country) %>% 
+  filter(n() >= 4)
+
+```
+
+
+```{r}
+# see occurances
+d_count <- table(d_filt$Closure)
+d_count <- sort(d_count, decreasing = T)
+print(d_count)
+```
+
+```{r}
+# set lower bound
+d_filt <- d_filt %>% 
+  group_by(Closure) %>% 
+  filter(n() >= 18)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
