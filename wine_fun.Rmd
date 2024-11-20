@@ -17,6 +17,8 @@ pacman::p_load('tidyverse', 'dslabs', 'cowplot', 'brms', 'dagitty')
 
 
 
+
+
 ```{r}
 
 ## Load in the divorce margarine dataset 
@@ -48,16 +50,14 @@ d <- d %>%
 d <- d %>%
   mutate(Price = as.numeric(str_extract(Price, "\\d+\\.?\\d*")))
 
-# Remove NV wines
-
-#d <- d %>%
-#  filter(!str_detect(Vintage, "NV"))
 
 ```
 
 
 ```{r}
-# see occurances
+
+# sChecking Grape variety and counts
+
 d_count <- table(d$Grape)
 d_count <- sort(d_count, decreasing = T)
 print(d_count)
@@ -65,12 +65,13 @@ print(d_count)
 
 ```
 
-## Only grape varieties with more than = 5 wines
+## Only grape varieties with more than or = 5 wines
 
 
 
 ```{r}
-# set lower bound
+# Setting lower bound  
+
 d_filt <- d %>% 
   group_by(Grape) %>% 
   filter(n() >= 5)
@@ -79,7 +80,8 @@ d_filt <- d %>%
 
 
 ```{r}
-# transform
+# Transforming grape names so synonyms are not in dataset 
+
 d_filt <- d_filt %>% 
   mutate(Grape = ifelse(Grape == "Shiraz", "Syrah", Grape),
          Grape = ifelse(Grape == "Garnacha", "Grenache", Grape),
@@ -89,11 +91,12 @@ d_filt <- d_filt %>%
 ```
 
 
-## Only Countries with more than = 8 wines
+## Only Countries with more than or = 8 wines
 
 
 ```{r}
-# see occurances
+# Country count 
+
 d_count <- table(d_filt$Country)
 d_count <- sort(d_count, decreasing = T)
 print(d_count)
@@ -102,7 +105,8 @@ print(d_count)
 ```
 
 ```{r}
-# set lower bound
+# Filtering 
+
 d_filt <- d_filt %>% 
   group_by(Country) %>% 
   filter(n() >= 8)
@@ -114,14 +118,16 @@ d_filt <- d_filt %>%
 
 
 ```{r}
-# see occurances
+# Checking closure types
+
 d_count <- table(d_filt$Closure)
 d_count <- sort(d_count, decreasing = T)
 print(d_count)
 ```
 
 ```{r}
-# set lower bound
+# Quick and dirty filtering of only screwcap and cork
+
 d_filt <- d_filt %>% 
   group_by(Closure) %>% 
   filter(n() >= 18)
@@ -165,6 +171,7 @@ d_filt %>%
 
 ```{r}
 
+## Draw the DAG
 
 dag <- dagitty("dag {
 Country -> Grape
@@ -185,11 +192,7 @@ plot(dag)
 
 adjustmentSets(dag, exposure = "Closure", outcome = "Price")
 
-## Implied conditional dependencies 
-
-imp_cond <- impliedConditionalIndependencies(dag)
-
-imp_cond
+## Interpreted as the set of variables that need to be adjusted for to estimate the causal effect of closure on price
 
 ```
 
@@ -410,12 +413,12 @@ sim_data %>%
 
 
 
-formula <- bf(price ~ closure, family = Gamma())
+formula <- bf(price ~ closure + grape + country, family = Gamma())
 
 # Define priors for the model
 priors <- c(
   prior(normal(0, 1), class = "b"),          # weakly informative priors
-  prior(normal(0, 1), class = "Intercept") #
+  prior(normal(0, 1), class = "Intercept") 
 )
 
 # Fit the Bayesian model
@@ -432,22 +435,6 @@ summary(fit)
 # Get the fixed effects
 fixed_effects <- fixef(fit)
 
-# Extract Intercept
-intercept <- fixed_effects["Intercept", "Estimate"]
-
-# Extract effect of screwtop
-screwtop_effect <- fixed_effects["closurescrewtop", "Estimate"]
-
-# Calculate mean price for cork
-mean_cork <- 1 / intercept
-
-# Calculate mean price for screwtop
-mean_screwtop <- 1 / (intercept + screwtop_effect)
-
-
-# Print mean prices
-mean_cork
-mean_screwtop
 
 ```
 
@@ -465,17 +452,20 @@ coef_df <- data.frame(
 
 ## Inverse the dataframe to get interpretable values
 
+## Therefore, add values from intercept to the estimates ### CHECK THIS INTERPRETABILITY OR NOT
+
 coef_df <- coef_df %>%
   mutate(Estimate = 1 / Estimate,
          CI_low = 1 / CI_low,
          CI_high = 1 / CI_high)
+
 
 ggplot(coef_df, aes(x = Parameter, y = Estimate)) +
   geom_point() +
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2) +
   coord_flip() +
   labs(
-    title = "Posterior Estimates with 95% Credible Intervals",
+    title = "Posterior Estimates with 95% CI - Simulated data",
     x = "Parameter",
     y = "Estimate"
   ) +
@@ -491,12 +481,12 @@ pp_check(fit, n_draws = 50, type = "dens_overlay") +
 
 ## Running with real data
 
-formula <- bf(Price ~ Closure, family = Gamma())
+formula <- bf(Price ~ Closure + Grape + Country, family = Gamma())
 
 # Define priors for the model
 priors <- c(
-  prior(normal(0, 1), class = "b"),          # weakly informative priors
-  prior(normal(0, 1), class = "Intercept") #
+  prior(normal(0, 10), class = "b"),          # weakly informative priors
+  prior(normal(0, 10), class = "Intercept") #
 )
 
 # Fit the Bayesian model
@@ -513,22 +503,7 @@ summary(fit_d)
 # Get the fixed effects
 fixed_effects_d <- fixef(fit_d)
 
-# Extract Intercept
-intercept <- fixed_effects_d["Intercept", "Estimate"]
 
-# Extract effect of screwtop
-screwtop_effect <- fixed_effects_d["ClosureScrewcap", "Estimate"]
-
-# Calculate mean price for cork
-mean_cork <- 1 / intercept
-
-# Calculate mean price for screwtop
-mean_screwtop <- 1 / (intercept + screwtop_effect)
-
-
-# Print mean prices
-mean_cork
-mean_screwtop
 
 ```
 ```{r}
@@ -554,7 +529,7 @@ ggplot(coef_df_d, aes(x = Parameter, y = Estimate)) +
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2) +
   coord_flip() +
   labs(
-    title = "Posterior Estimates with 95% Credible Intervals",
+    title = "Posterior Estimates with 95% CI - Collected data",
     x = "Parameter",
     y = "Estimate"
   ) +
