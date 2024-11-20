@@ -142,13 +142,23 @@ d_filt %>%
   labs(title = "Distribution of wine prices",
        x = "Price",
        y = "Frequency") +
-  theme_minimal()
+  theme_cowplot()
 
 
+## Plotting boxplots of closure type and price
 
+d_filt %>%
+  ggplot(aes(Closure, Price)) +
+  geom_boxplot(fill = "skyblue", color = "black") +
+  labs(title = "Price distribution by closure type",
+       x = "Closure type",
+       y = "Price") +
+  theme_cowplot()
 
 
 ```
+
+
 
 
 ## Simulating the DAG 
@@ -177,7 +187,9 @@ adjustmentSets(dag, exposure = "Closure", outcome = "Price")
 
 ## Implied conditional dependencies 
 
-impliedConditionalIndependencies(dag)
+imp_cond <- impliedConditionalIndependencies(dag)
+
+imp_cond
 
 ```
 
@@ -300,6 +312,9 @@ sim_data$closure <- mapply(function(c, g) {
 
 
 
+
+
+
 ```{r}
 
 # Simulate price data
@@ -307,11 +322,11 @@ sim_data$closure <- mapply(function(c, g) {
 
 # Define base scale and shape parameters for gamma distribution
 base_params <- list(
-  "France" = c(scale = 20, shape = 2),
-  "Italy" = c(scale = 15, shape = 2.5),
-  "Spain" = c(scale = 14, shape = 3),
-  "USA" = c(scale = 12, shape = 2.2),
-  "Australia" = c(scale = 10, shape = 2.8)
+  "France" = c(scale = 20, shape = 1.1),
+  "Italy" = c(scale = 15, shape = 1.4),
+  "Spain" = c(scale = 14, shape = 1.8),
+  "USA" = c(scale = 12, shape = 1.2),
+  "Australia" = c(scale = 10, shape = 1.5)
 )
 
 # Adjustments for grape varieties
@@ -326,8 +341,8 @@ grape_adjustments <- list(
 
 # Adjustments for closure type
 closure_adjustments <- list(
-  "screwtop" = c(scale = 0.8, shape = 0.9),
-  "cork" = c(scale = 1.5, shape = 1.2)
+  "screwtop" = c(scale = 0.6, shape = 1),
+  "cork" = c(scale = 1.1, shape = 1)
 )
 
 # Calculate price using gamma distribution
@@ -350,6 +365,25 @@ sim_data$price <- mapply(function(c, g, cl) {
 
 
 
+
+```{r}
+
+## Plotting the closure type x axis and price y as boxplots
+
+sim_data %>%
+  ggplot(aes(closure, price)) +
+  geom_boxplot(fill = "skyblue", color = "black") +
+  labs(title = "Price distribution by closure type",
+       x = "Closure type",
+       y = "Price") +
+  theme_cowplot()
+
+
+
+```
+
+
+
 ```{r}
 
 ## Plot prices from sim_data
@@ -360,7 +394,7 @@ sim_data %>%
   labs(title = "Simulated distribution of wine prices",
        x = "Price",
        y = "Frequency") +
-  theme_minimal()
+  theme_cowplot()
 
 
 
@@ -380,10 +414,10 @@ formula <- bf(price ~ closure, family = Gamma())
 
 # Define priors for the model
 priors <- c(
-  prior(normal(0, 1), class = "b"),          # Slope for x
-  prior(normal(0, 1), class = "Intercept") # Intercept
-  #prior(exponential(1), class = "sigma")     # Prior for scale parameter of the gamma distribution
+  prior(normal(0, 1), class = "b"),          # weakly informative priors
+  prior(normal(0, 1), class = "Intercept") #
 )
+
 # Fit the Bayesian model
 fit <- brm(
   formula = formula,
@@ -394,6 +428,143 @@ fit <- brm(
 
 # Print a summary of the model
 summary(fit)
+
+# Get the fixed effects
+fixed_effects <- fixef(fit)
+
+# Extract Intercept
+intercept <- fixed_effects["Intercept", "Estimate"]
+
+# Extract effect of screwtop
+screwtop_effect <- fixed_effects["closurescrewtop", "Estimate"]
+
+# Calculate mean price for cork
+mean_cork <- 1 / intercept
+
+# Calculate mean price for screwtop
+mean_screwtop <- 1 / (intercept + screwtop_effect)
+
+
+# Print mean prices
+mean_cork
+mean_screwtop
+
+```
+
+
+
+```{r}
+
+# Convert to a dataframe for plotting
+coef_df <- data.frame(
+  Parameter = rownames(fixed_effects),
+  Estimate = fixed_effects[, "Estimate"],
+  CI_low = fixed_effects[, "Q2.5"],
+  CI_high = fixed_effects[, "Q97.5"]
+)
+
+## Inverse the dataframe to get interpretable values
+
+coef_df <- coef_df %>%
+  mutate(Estimate = 1 / Estimate,
+         CI_low = 1 / CI_low,
+         CI_high = 1 / CI_high)
+
+ggplot(coef_df, aes(x = Parameter, y = Estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2) +
+  coord_flip() +
+  labs(
+    title = "Posterior Estimates with 95% Credible Intervals",
+    x = "Parameter",
+    y = "Estimate"
+  ) +
+  theme_cowplot()
+
+## Posterior predictive check 
+
+pp_check(fit, n_draws = 50, type = "dens_overlay") + 
+  ggtitle("Posterior Predictive Check - simulated data")
+
+```
+```{r}
+
+## Running with real data
+
+formula <- bf(Price ~ Closure, family = Gamma())
+
+# Define priors for the model
+priors <- c(
+  prior(normal(0, 1), class = "b"),          # weakly informative priors
+  prior(normal(0, 1), class = "Intercept") #
+)
+
+# Fit the Bayesian model
+fit_d <- brm(
+  formula = formula,
+  data = d_filt,
+  prior = priors,
+  iter = 4000, warmup = 1000, chains = 8, cores = 8
+)
+
+# Print a summary of the model
+summary(fit_d)
+
+# Get the fixed effects
+fixed_effects_d <- fixef(fit_d)
+
+# Extract Intercept
+intercept <- fixed_effects_d["Intercept", "Estimate"]
+
+# Extract effect of screwtop
+screwtop_effect <- fixed_effects_d["ClosureScrewcap", "Estimate"]
+
+# Calculate mean price for cork
+mean_cork <- 1 / intercept
+
+# Calculate mean price for screwtop
+mean_screwtop <- 1 / (intercept + screwtop_effect)
+
+
+# Print mean prices
+mean_cork
+mean_screwtop
+
+```
+```{r}
+
+
+# Convert to a dataframe for plotting
+coef_df_d <- data.frame(
+  Parameter = rownames(fixed_effects_d),
+  Estimate = fixed_effects_d[, "Estimate"],
+  CI_low = fixed_effects_d[, "Q2.5"],
+  CI_high = fixed_effects_d[, "Q97.5"]
+)
+
+## Inverse the dataframe to get interpretable values
+
+coef_df_d <- coef_df_d %>%
+  mutate(Estimate = 1 / Estimate,
+         CI_low = 1 / CI_low,
+         CI_high = 1 / CI_high)
+
+ggplot(coef_df_d, aes(x = Parameter, y = Estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2) +
+  coord_flip() +
+  labs(
+    title = "Posterior Estimates with 95% Credible Intervals",
+    x = "Parameter",
+    y = "Estimate"
+  ) +
+  theme_cowplot()
+
+## Posterior predictive check 
+
+pp_check(fit_d, n_draws = 50, type = "dens_overlay") + 
+  ggtitle("Posterior Predictive Check - Collected data")
+
 
 
 
