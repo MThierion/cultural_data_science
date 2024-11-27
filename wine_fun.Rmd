@@ -74,7 +74,7 @@ print(d_count)
 
 d_filt <- d %>% 
   group_by(Grape) %>% 
-  filter(n() >= 5)
+  filter(n() >= 69)
 
 ```
 
@@ -109,7 +109,7 @@ print(d_count)
 
 d_filt <- d_filt %>% 
   group_by(Country) %>% 
-  filter(n() >= 8)
+  filter(n() >= 26)
 
 ```
 
@@ -327,7 +327,7 @@ sim_data$closure <- mapply(function(c, g) {
 base_params <- list(
   "France" = c(scale = 20, shape = 1.1),
   "Italy" = c(scale = 15, shape = 1.4),
-  "Spain" = c(scale = 14, shape = 1.8),
+  "Spain" = c(scale = 14, shape = 1.2),
   "USA" = c(scale = 12, shape = 1.2),
   "Australia" = c(scale = 10, shape = 1.5)
 )
@@ -417,8 +417,8 @@ formula <- bf(price ~ closure + grape + country, family = Gamma())
 
 # Define priors for the model
 priors <- c(
-  prior(normal(0, 1), class = "b"),          # weakly informative priors
-  prior(normal(0, 1), class = "Intercept") 
+  prior(normal(0, 1), class = "b", lb = 0),     # Lower bound of 0
+  prior(normal(0, 1), class = "Intercept", lb = 0)
 )
 
 # Fit the Bayesian model
@@ -426,7 +426,7 @@ fit <- brm(
   formula = formula,
   data = sim_data,
   prior = priors,
-  iter = 4000, warmup = 1000, chains = 8, cores = 8
+  iter = 8000, warmup = 4000, chains = 8, cores = 8
 )
 
 # Print a summary of the model
@@ -479,22 +479,26 @@ pp_check(fit, n_draws = 50, type = "dens_overlay") +
 ```
 ```{r}
 
+data_filt <- d_filt %>% select(Price, Closure, Grape, Country)
+
+
 ## Running with real data
 
 formula <- bf(Price ~ Closure + Grape + Country, family = Gamma())
 
 # Define priors for the model
 priors <- c(
-  prior(normal(0, 10), class = "b"),          # weakly informative priors
-  prior(normal(0, 10), class = "Intercept") #
+  prior(normal(0, 2), class = "b", lb = 0),     # Lower bound of 0
+  prior(normal(0, 2), class = "Intercept", lb = 0)
 )
+
 
 # Fit the Bayesian model
 fit_d <- brm(
   formula = formula,
-  data = d_filt,
+  data = data_filt,
   prior = priors,
-  iter = 4000, warmup = 1000, chains = 8, cores = 8
+  iter = 16000, warmup = 8000, chains = 8, cores = 8
 )
 
 # Print a summary of the model
@@ -506,6 +510,11 @@ fixed_effects_d <- fixef(fit_d)
 
 
 ```
+
+
+
+
+
 ```{r}
 
 
