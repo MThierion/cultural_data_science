@@ -525,8 +525,6 @@ cat("Percentage Change:", percentage_change, "%\n")
 
 
 
-```
-
 
 
 
@@ -542,8 +540,8 @@ formula <- bf(Price ~ Closure + Grape + Country, family = Gamma())
 
 # Define priors for the model
 priors <- c(
-  prior(normal(0, 2), class = "b", lb = 0),     # Lower bound of 0
-  prior(normal(0, 2), class = "Intercept", lb = 0)
+  prior(normal(0, 1), class = "b", lb = 0),     # Lower bound of 0
+  prior(normal(0, 1), class = "Intercept", lb = 0)
 )
 
 
