@@ -65,6 +65,26 @@ print(d_count)
 
 ```
 
+```{r}
+# Transforming grape names so synonyms are not in dataset 
+
+d <- d %>% 
+  mutate(Grape = ifelse(Grape == "Shiraz", "Syrah", Grape),
+         Grape = ifelse(Grape == "Garnacha", "Grenache", Grape),
+         Grape = ifelse(Grape == "Pinot Grigio", "Pinot Gris", Grape), 
+         Grape = ifelse(Grape == "Primitivo", "Zinfandel", Grape))
+
+## Recheck 
+
+# sChecking Grape variety and counts
+
+d_count <- table(d$Grape)
+d_count <- sort(d_count, decreasing = T)
+print(d_count)
+         
+```
+
+
 ## Only grape varieties with more than or = 5 wines
 
 
@@ -79,16 +99,7 @@ d_filt <- d %>%
 ```
 
 
-```{r}
-# Transforming grape names so synonyms are not in dataset 
 
-d_filt <- d_filt %>% 
-  mutate(Grape = ifelse(Grape == "Shiraz", "Syrah", Grape),
-         Grape = ifelse(Grape == "Garnacha", "Grenache", Grape),
-         Grape = ifelse(Grape == "Pinot Grigio", "Pinot Gris", Grape), 
-         Grape = ifelse(Grape == "Primitivo", "Zinfandel", Grape))
-         
-```
 
 
 ## Only Countries with more than or = 8 wines
@@ -210,7 +221,7 @@ adjustmentSets(dag, exposure = "Closure", outcome = "Price")
 
 n = 1000
 
-categories <- c("France", "Italy", "Spain", "USA", "Australia")
+categories <- c("France", "New Zealand", "South Africa", "USA", "Australia")
 probabilities <- c(0.3, 0.2, 0.2, 0.1, 0.2)
 
 
@@ -229,15 +240,15 @@ sim_data <- data.frame(
 ## Simulate grape data
 
 # Grape categories
-grapes <- c("Chardonnay", "Sauvignon Blanc", "Cabernet Sauvignon", "Merlot", 
+grapes <- c("Chardonnay", "Sauvignon Blanc", "Cabernet Sauvignon", "Grenache", 
             "Pinot Noir")
 
 
 # Define toy probabilities for grape varieties based on country
 grape_probs <- list(
   "France" = c(0.2, 0.2, 0.2, 0.2, 0.2),
-  "Italy" = c(0.05, 0.05, 0.2, 0.5, 0.2),
-  "Spain" = c(0.4, 0.2, 0.1, 0.2, 0.1),
+  "New Zealand" = c(0.05, 0.05, 0.2, 0.5, 0.2),
+  "South Africa" = c(0.4, 0.2, 0.1, 0.2, 0.1),
   "USA" = c(0.2, 0.3, 0.2, 0.1, 0.2),
   "Australia" = c(0.2, 0.2, 0.4, 0, 0.2)
 )
@@ -265,7 +276,7 @@ closure_probs <- list(
     "Chardonnay" = c(screwtop = 0.2, cork = 0.8),
     "Sauvignon Blanc" = c(screwtop = 0.3, cork = 0.7),
     "Cabernet Sauvignon" = c(screwtop = 0.2, cork = 0.8),
-    "Merlot" = c(screwtop = 0.3, cork = 0.7),
+    "Grenache" = c(screwtop = 0.3, cork = 0.7),
     "Pinot Noir" = c(screwtop = 0.1, cork = 0.9)
     
   ),
@@ -273,25 +284,25 @@ closure_probs <- list(
     "Chardonnay" = c(screwtop = 0.8, cork = 0.2),
     "Sauvignon Blanc" = c(screwtop = 0.9, cork = 0.1),
     "Cabernet Sauvignon" = c(screwtop = 0.6, cork = 0.4),
-    "Merlot" = c(screwtop = 0.7, cork = 0.3),
+    "Grenache" = c(screwtop = 0.7, cork = 0.3),
     "Pinot Noir" = c(screwtop = 0.7, cork = 0.3)
     
   ),
   
-  "Italy" = list(
+  "New Zealand" = list(
     "Chardonnay" = c(screwtop = 0.2, cork = 0.8),
     "Sauvignon Blanc" = c(screwtop = 0.3, cork = 0.7),
     "Cabernet Sauvignon" = c(screwtop = 0.1, cork = 0.9),
-    "Merlot" = c(screwtop = 0.2, cork = 0.8),
+    "Grenache" = c(screwtop = 0.2, cork = 0.8),
     "Pinot Noir" = c(screwtop = 0.3, cork = 0.7)
     
   ),
   
-  "Spain" = list(
+  "South Africa" = list(
     "Chardonnay" = c(screwtop = 0.4, cork = 0.6),
     "Sauvignon Blanc" = c(screwtop = 0.4, cork = 0.6),
     "Cabernet Sauvignon" = c(screwtop = 0.5, cork = 0.5),
-    "Merlot" = c(screwtop = 0.5, cork = 0.5),
+    "Grenache" = c(screwtop = 0.5, cork = 0.5),
     "Pinot Noir" = c(screwtop = 0.4, cork = 0.6)
   ),
   
@@ -299,7 +310,7 @@ closure_probs <- list(
     "Chardonnay" = c(screwtop = 0.7, cork = 0.3),
     "Sauvignon Blanc" = c(screwtop = 0.8, cork = 0.2),
     "Cabernet Sauvignon" = c(screwtop = 0.4, cork = 0.6),
-    "Merlot" = c(screwtop = 0.4, cork = 0.6),
+    "Grenache" = c(screwtop = 0.4, cork = 0.6),
     "Pinot Noir" = c(screwtop = 0.5, cork = 0.5)
 ))
 
@@ -326,8 +337,8 @@ sim_data$closure <- mapply(function(c, g) {
 # Define base scale and shape parameters for gamma distribution
 base_params <- list(
   "France" = c(scale = 20, shape = 1.1),
-  "Italy" = c(scale = 15, shape = 1.4),
-  "Spain" = c(scale = 14, shape = 1.2),
+  "New Zealand" = c(scale = 15, shape = 1.4),
+  "South Africa" = c(scale = 14, shape = 1.2),
   "USA" = c(scale = 12, shape = 1.2),
   "Australia" = c(scale = 10, shape = 1.5)
 )
@@ -337,7 +348,7 @@ grape_adjustments <- list(
   "Chardonnay" = c(scale = 1, shape = 1),
   "Sauvignon Blanc" = c(scale = 0.8, shape = 1.0),
   "Cabernet Sauvignon" = c(scale = 1.2, shape = 1.2),
-  "Merlot" = c(scale = 1.1, shape = 1.1),
+  "Grenache" = c(scale = 1.1, shape = 1.1),
   "Pinot Noir" = c(scale = 1.4, shape = 0.8)
   # Extend for other grapes...
 )
@@ -460,23 +471,66 @@ coef_df <- coef_df %>%
          CI_high = 1 / CI_high)
 
 
-ggplot(coef_df, aes(x = Parameter, y = Estimate)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2) +
+# Filter for intercept and closure parameters
+coef_df_filtered <- coef_df %>%
+  filter(Parameter %in% c("Intercept", "closurescrewtop")) # Replace "Closure" with the actual parameter name if needed
+
+# Plot filtered parameters
+ggplot(coef_df_filtered, aes(x = Parameter, y = Estimate)) +
+  geom_point(size = 3, color = "blue") + # Larger points for emphasis
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2, color = "blue") +
   coord_flip() +
   labs(
-    title = "Posterior Estimates with 95% CI - Simulated data",
+    title = "Posterior Estimates for Closure - Simulated",
     x = "Parameter",
-    y = "Estimate"
+    y = "Inverse Transformed Estimate"
   ) +
-  theme_cowplot()
+  theme_cowplot() +
+  theme(plot.title = element_text(hjust = 0.5)) # Center title
+
 
 ## Posterior predictive check 
 
-pp_check(fit, n_draws = 50, type = "dens_overlay") + 
-  ggtitle("Posterior Predictive Check - simulated data")
+pp_check(fit, ndraws = 50, type = "dens_overlay") + 
+  ggtitle("Posterior Predictive Check - Simulated data") + 
+  xlab("Price") +
+  ylab("Density") +
+  theme_cowplot()
 
 ```
+```{r}
+
+# Extract coefficients
+intercept <- coef_df_filtered$Estimate[coef_df_filtered$Parameter == "Intercept"]
+closure_screwcap <- coef_df_filtered$Estimate[coef_df_filtered$Parameter == "closurescrewtop"]
+
+# Calculate adjusted price for screw cap wines
+cork_price <- intercept # Baseline for cork
+screwcap_price <- intercept - closure_screwcap
+
+# Relative difference and percentage change
+relative_effect <- cork_price / screwcap_price
+percentage_change <- (relative_effect - 1) * 100
+
+# Output results
+cat("Baseline (Cork) Price:", cork_price, "\n")
+cat("Adjusted Screw Cap Price:", screwcap_price, "\n")
+cat("Relative Effect (Cork vs Screw Cap):", relative_effect, "\n")
+cat("Percentage Change:", percentage_change, "%\n")
+
+
+
+
+```
+
+
+
+```
+
+
+
+
+
 ```{r}
 
 data_filt <- d_filt %>% select(Price, Closure, Grape, Country)
@@ -498,7 +552,7 @@ fit_d <- brm(
   formula = formula,
   data = data_filt,
   prior = priors,
-  iter = 16000, warmup = 8000, chains = 8, cores = 8
+  iter = 8000, warmup = 4000, chains = 8, cores = 8
 )
 
 # Print a summary of the model
@@ -533,21 +587,59 @@ coef_df_d <- coef_df_d %>%
          CI_low = 1 / CI_low,
          CI_high = 1 / CI_high)
 
-ggplot(coef_df_d, aes(x = Parameter, y = Estimate)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2) +
+
+
+# Filter for intercept and closure parameters
+coef_df_filtered_d <- coef_df_d %>%
+  filter(Parameter %in% c("Intercept", "ClosureScrewcap")) # Replace "Closure" with the actual parameter name if needed
+
+# Plot filtered parameters
+ggplot(coef_df_filtered_d, aes(x = Parameter, y = Estimate)) +
+  geom_point(size = 3, color = "orange") + # Larger points for emphasis
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2, color = "orange") +
   coord_flip() +
   labs(
-    title = "Posterior Estimates with 95% CI - Collected data",
+    title = "Posterior Estimates for Closure - Real Data",
     x = "Parameter",
-    y = "Estimate"
+    y = "Inverse Transformed Estimate"
   ) +
-  theme_cowplot()
+  theme_cowplot() +
+  theme(plot.title = element_text(hjust = 0.5)) # Center title
+
 
 ## Posterior predictive check 
 
-pp_check(fit_d, n_draws = 50, type = "dens_overlay") + 
-  ggtitle("Posterior Predictive Check - Collected data")
+pp_check(fit_d, ndraws = 50, type = "dens_overlay") + 
+  ggtitle("Posterior Predictive Check - Real Data") + 
+  xlab("Price") +
+  ylab("Density") +
+  theme_cowplot()
+
+
+
+```
+
+
+
+```{r}
+
+# Extract coefficients
+intercept <- coef_df_filtered_d$Estimate[coef_df_filtered_d$Parameter == "Intercept"]
+closure_screwcap <- coef_df_filtered_d$Estimate[coef_df_filtered_d$Parameter == "ClosureScrewcap"]
+
+# Calculate adjusted price for screw cap wines
+cork_price <- intercept # Baseline for cork
+screwcap_price <- intercept - closure_screwcap
+
+# Relative difference and percentage change
+relative_effect <- cork_price / screwcap_price
+percentage_change <- (relative_effect - 1) * 100
+
+# Output results
+cat("Baseline (Cork) Price:", cork_price, "\n")
+cat("Adjusted Screw Cap Price:", screwcap_price, "\n")
+cat("Relative Effect (Cork vs Screw Cap):", relative_effect, "\n")
+cat("Percentage Change:", percentage_change, "%\n")
 
 
 
