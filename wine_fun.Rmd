@@ -56,7 +56,7 @@ d <- d %>%
 
 ```{r}
 
-# sChecking Grape variety and counts
+# Checking Grape variety and counts
 
 d_count <- table(d$Grape)
 d_count <- sort(d_count, decreasing = T)
@@ -76,7 +76,7 @@ d <- d %>%
 
 ## Recheck 
 
-# sChecking Grape variety and counts
+# Checking Grape variety and counts
 
 d_count <- table(d$Grape)
 d_count <- sort(d_count, decreasing = T)
@@ -85,8 +85,7 @@ print(d_count)
 ```
 
 
-## Only grape varieties with more than or = 5 wines
-
+## Only top 5 grape varietires
 
 
 ```{r}
@@ -94,7 +93,7 @@ print(d_count)
 
 d_filt <- d %>% 
   group_by(Grape) %>% 
-  filter(n() >= 69)
+  filter(n() >= 70)
 
 ```
 
@@ -102,7 +101,7 @@ d_filt <- d %>%
 
 
 
-## Only Countries with more than or = 8 wines
+## Only top five countries
 
 
 ```{r}
@@ -216,7 +215,7 @@ adjustmentSets(dag, exposure = "Closure", outcome = "Price")
 
 # Simulate country data
 
-## Probabilities for 10 countries
+## Probabilities for top 5 countries
 
 
 n = 1000
@@ -270,7 +269,8 @@ sim_data$grape <- sapply(sim_data$country, function(c) {
 
 
 
-# Define conditional probabilities for closure type based on country and grape
+# Define conditional probabilities for closure type based on country and grape - toy values
+
 closure_probs <- list(
   "France" = list(
     "Chardonnay" = c(screwtop = 0.2, cork = 0.8),
@@ -422,13 +422,13 @@ sim_data %>%
 
 ```{r}
 
-
+## Simulated data modelling
 
 formula <- bf(price ~ closure + grape + country, family = Gamma())
 
 # Define priors for the model
 priors <- c(
-  prior(normal(0, 1), class = "b", lb = 0),     # Lower bound of 0
+  prior(normal(0, 1), class = "b", lb = 0),     # Lower bound of 0 to make it half-normal
   prior(normal(0, 1), class = "Intercept", lb = 0)
 )
 
@@ -454,6 +454,7 @@ fixed_effects <- fixef(fit)
 ```{r}
 
 # Convert to a dataframe for plotting
+
 coef_df <- data.frame(
   Parameter = rownames(fixed_effects),
   Estimate = fixed_effects[, "Estimate"],
@@ -463,8 +464,6 @@ coef_df <- data.frame(
 
 ## Inverse the dataframe to get interpretable values
 
-## Therefore, add values from intercept to the estimates ### CHECK THIS INTERPRETABILITY OR NOT
-
 coef_df <- coef_df %>%
   mutate(Estimate = 1 / Estimate,
          CI_low = 1 / CI_low,
@@ -472,10 +471,12 @@ coef_df <- coef_df %>%
 
 
 # Filter for intercept and closure parameters
+
 coef_df_filtered <- coef_df %>%
-  filter(Parameter %in% c("Intercept", "closurescrewtop")) # Replace "Closure" with the actual parameter name if needed
+  filter(Parameter %in% c("Intercept", "closurescrewtop")) 
 
 # Plot filtered parameters
+
 ggplot(coef_df_filtered, aes(x = Parameter, y = Estimate)) +
   geom_point(size = 3, color = "blue") + # Larger points for emphasis
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.2, color = "blue") +
@@ -531,16 +532,16 @@ cat("Percentage Change:", percentage_change, "%\n")
 
 ```{r}
 
+## Use the real data 
+
 data_filt <- d_filt %>% select(Price, Closure, Grape, Country)
 
-
-## Running with real data
 
 formula <- bf(Price ~ Closure + Grape + Country, family = Gamma())
 
 # Define priors for the model
 priors <- c(
-  prior(normal(0, 1), class = "b", lb = 0),     # Lower bound of 0
+  prior(normal(0, 1), class = "b", lb = 0),   
   prior(normal(0, 1), class = "Intercept", lb = 0)
 )
 
@@ -589,7 +590,7 @@ coef_df_d <- coef_df_d %>%
 
 # Filter for intercept and closure parameters
 coef_df_filtered_d <- coef_df_d %>%
-  filter(Parameter %in% c("Intercept", "ClosureScrewcap")) # Replace "Closure" with the actual parameter name if needed
+  filter(Parameter %in% c("Intercept", "ClosureScrewcap")) 
 
 # Plot filtered parameters
 ggplot(coef_df_filtered_d, aes(x = Parameter, y = Estimate)) +
